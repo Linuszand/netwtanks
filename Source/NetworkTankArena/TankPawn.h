@@ -36,6 +36,13 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnRep_ReplicatedMovement() override;
+	
+	FVector TargetLocation;
+	FRotator TargetRotation;
+	
+	float CurrentTurretYaw;
+	float InterpSpeed = 10.f;
 
 private:
 	friend class FTankMultiplayerAuthorityTest;

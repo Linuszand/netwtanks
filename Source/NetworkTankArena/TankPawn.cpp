@@ -107,6 +107,10 @@ void ATankPawn::BeginPlay()
 	PreviousPresentationYaw = NormalizeYaw(GetActorRotation().Yaw);
 	UpdateControllerTickPrerequisite();
 	ApplyPresentation(0.f);
+	
+	TargetLocation = GetActorLocation();
+	TargetRotation = GetActorRotation();
+	CurrentTurretYaw = CanonicalTurretWorldYaw;
 }
 
 void ATankPawn::SubmitControlIntent(const FTankControlIntent& Intent)
@@ -150,6 +154,12 @@ void ATankPawn::Tick(float DeltaTime)
 			CanonicalTurretWorldYaw = NetworkTankArena::LocalTank::ResolveTurretWorldYaw(
 				CanonicalTurretWorldYaw, GetActorLocation(), CurrentIntent);
 		}
+	} else if (GetLocalRole() == ROLE_SimulatedProxy)
+	{
+		FVector SmoothLocation = FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaTime, InterpSpeed);
+		FRotator SmoothRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, InterpSpeed);
+		
+		SetActorLocationAndRotation(SmoothLocation, SmoothRotation);
 	}
 	ApplyPresentation(DeltaTime);
 }
@@ -205,8 +215,13 @@ void ATankPawn::ApplyPresentation(float DeltaTime)
 	const double Bob = FMath::Sin(HoverPhase) * NonNegativeFinite(HoverAmplitude);
 	VisualRoot->SetRelativeLocation(BaseVisualTransform.GetLocation() + FVector(0.0, 0.0, Bob));
 	ChassisVisualPivot->SetRelativeRotation(BaseChassisTransform.Rotator() + FRotator(0.0, 0.0, CurrentBankDegrees));
+	
+	FRotator CurrentRot(0.f, CurrentTurretYaw, 0.f);
+	FRotator TargetRot(0.f, CanonicalTurretWorldYaw, 0.f);
+	
+	CurrentTurretYaw = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, InterpSpeed).Yaw;
 	TurretYawPivot->SetRelativeRotation(FRotator(0.0,
-		CalculateRelativeTurretYaw(GetActorRotation().Yaw, CanonicalTurretWorldYaw), 0.0));
+		CalculateRelativeTurretYaw(GetActorRotation().Yaw, CurrentTurretYaw), 0.0));
 }
 
 void ATankPawn::UpdateControllerTickPrerequisite()
@@ -239,4 +254,10 @@ void ATankPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	TickController.Reset();
 	Super::EndPlay(EndPlayReason);
+}
+
+void ATankPawn::OnRep_ReplicatedMovement()
+{
+	TargetLocation = GetReplicatedMovement().Location;
+	TargetRotation = GetReplicatedMovement().Rotation;
 }

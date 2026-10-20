@@ -8,6 +8,7 @@
 #include "TankGameplayMath.h"
 #include "TankPawn.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Widgets/Text/STextScroller.h"
 
 ATankProjectile::ATankProjectile()
 {
@@ -48,7 +49,8 @@ void ATankProjectile::Initialize(ATankPawn* Shooter, const FVector& Direction)
 void ATankProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	SetActorTickEnabled(HasAuthority() && GetNetMode() != NM_Client);
+	SetActorTickEnabled(true);
+	TargetLocation = GetActorLocation();
 }
 
 void ATankProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -102,17 +104,31 @@ void ATankProjectile::ResolveHit(const FHitResult& Hit)
 void ATankProjectile::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (!HasAuthority() || GetNetMode() == NM_Client || bTerminal) { return; }
+	if (bTerminal) { return; }
+	
+	if (!HasAuthority() || GetNetMode() == NM_Client)
+	{
+		
+		FVector NewLocation = FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaSeconds, InterpSpeed);
+       
+		SetActorLocation(NewLocation);
+		return;
+	}
+	
 	if (!FiringTank.IsValid() || FiringTank->IsActorBeingDestroyed() || RemainingLifetime <= 0.f)
 	{
 		bTerminal = true;
 		Destroy();
 		return;
 	}
+    
 	if (!NetworkTankArena::LocalTank::IsValidDeltaTime(DeltaSeconds)) { return; }
+    
 	const float Step = FMath::Min(DeltaSeconds, RemainingLifetime);
 	const FVector Start = GetActorLocation();
+	
 	const FVector End = Start + Forward * NetworkTankArena::LocalCombat::ProjectileSpeed * Step;
+    
 	FHitResult Hit;
 	if (SweepPath(GetWorld(), Start, End, FiringTank.Get(), this, Hit))
 	{
@@ -120,6 +136,7 @@ void ATankProjectile::Tick(float DeltaSeconds)
 		ResolveHit(Hit);
 		return;
 	}
+    
 	SetActorLocation(End);
 	RemainingLifetime -= Step;
 	if (RemainingLifetime <= 0.f)
@@ -127,4 +144,9 @@ void ATankProjectile::Tick(float DeltaSeconds)
 		bTerminal = true;
 		Destroy();
 	}
+}
+
+void ATankProjectile::OnRep_ReplicatedMovement()
+{
+	TargetLocation = GetReplicatedMovement().Location;
 }

@@ -25,6 +25,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnRep_ReplicatedMovement() override;
+	
+	FVector TargetLocation;
+	float InterpSpeed = 30.f;
 
 private:
 	friend class UTankWeaponComponent;
