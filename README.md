@@ -38,3 +38,7 @@ the console with tilde and enter `HostLocalhost`. In the second, enter
 `JoinLocalhost`. This uses `127.0.0.1:7777`; start the host before joining.
 These commands start from standalone play and require `TestMap` in the package.
 No account or online service is required.
+
+# Interpolation, Prediction & Reconciliation
+| Technique | Target | When does it happen? | Main Purpose |
+| Interpolation | Remote Entities | Slightly in the past | Smooth out player movement |    
