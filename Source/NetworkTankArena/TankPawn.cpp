@@ -157,47 +157,34 @@ void ATankPawn::Tick(float DeltaTime)
 		}
 	} else if (GetLocalRole() == ROLE_SimulatedProxy)
 	{
-		if (SnapshotBuffer.Num() >= 2)
+		const float RenderTime = GetWorld()->GetTimeSeconds() - InterpDelay;
+		
+		FVector TargetLoc;
+		FRotator TargetRot;
+		if (NetworkTankArena::LocalTank::TryCalculateSnapshotInterpolation(SnapshotBuffer, RenderTime, TargetLoc, TargetRot))
 		{
-			const float RenderTime = GetWorld()->GetTimeSeconds() - InterpDelay;
-			
-			int IndexAfter = -1;
-			for (int i = 0; i < SnapshotBuffer.Num(); i++)
+			SetActorLocationAndRotation(TargetLoc, TargetRot);
+			while (SnapshotBuffer.Num() > 2 && SnapshotBuffer[1].Timestamp < RenderTime)
 			{
-				if (SnapshotBuffer[i].Timestamp > RenderTime)
-				{
-					IndexAfter = i;
-					break;
-				}
+				SnapshotBuffer.RemoveAt(0);
 			}
-			
-			if (IndexAfter > 0)
-			{
-				FTankSnapshot SnapshotBefore = SnapshotBuffer[IndexAfter - 1];
-				FTankSnapshot SnapshotAfter = SnapshotBuffer[IndexAfter];
-				
-				const float TimeDiff = SnapshotAfter.Timestamp - SnapshotBefore.Timestamp;
-				const float Alpha = (RenderTime - SnapshotBefore.Timestamp) / TimeDiff;
-				
-				FVector TargetLoc = FMath::Lerp(SnapshotBefore.Location, SnapshotAfter.Location, Alpha);
-				FRotator TargetRot = FQuat::Slerp(SnapshotBefore.Rotation.Quaternion(), SnapshotAfter.Rotation.Quaternion(), Alpha).Rotator();
-				
-				SetActorLocationAndRotation(TargetLoc, TargetRot);
-				
-				if (IndexAfter > 0)
-				{
-					SnapshotBuffer.RemoveAt(0, IndexAfter - 1);
-				}
-			} else if (IndexAfter == -1)
+		}
+		
+		else if (SnapshotBuffer.Num() > 0)
+		{
+			if (RenderTime > SnapshotBuffer.Last().Timestamp)
 			{
 				FVector SmoothLoc = FMath::VInterpTo(GetActorLocation(), SnapshotBuffer.Last().Location, DeltaTime, InterpSpeed);
-				FRotator SmoothRot = FMath::RInterpTo(GetActorRotation(), SnapshotBuffer.Last().Rotation, DeltaTime, InterpSpeed);
+				FRotator SmoothRot = FQuat::Slerp(GetActorRotation().Quaternion(), SnapshotBuffer.Last().Rotation.Quaternion(), DeltaTime * InterpSpeed).Rotator();
 				SetActorLocationAndRotation(SmoothLoc, SmoothRot);
 			}
 		}
 	}
 	ApplyPresentation(DeltaTime);
 }
+	
+
+	
 
 void ATankPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

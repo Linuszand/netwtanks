@@ -13,6 +13,9 @@ struct FTankSnapshot
 
 		UPROPERTY()
 		FRotator Rotation = FRotator::ZeroRotator;
+	
+		UPROPERTY()
+		FRotator TurretRotation = FRotator::ZeroRotator;
 
 		UPROPERTY()
 		float Timestamp = 0.f;

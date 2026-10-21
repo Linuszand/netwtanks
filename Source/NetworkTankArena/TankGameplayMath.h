@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "TankControlIntent.h"
 
+struct FTankSnapshot;
+
 namespace NetworkTankArena::LocalTank
 {
 	bool IsFiniteVector(const FVector& Value);
@@ -21,4 +23,5 @@ namespace NetworkTankArena::LocalTank
 	float ResolveTurretWorldYaw(float PreviousYaw, const FVector& GameplayPosition,
 		const FTankControlIntent& Intent);
 	float CalculateRelativeTurretYaw(float ChassisYaw, float TurretWorldYaw);
+	bool TryCalculateSnapshotInterpolation(const TArray<FTankSnapshot>& Buffer, float RenderTime, FVector& OutLocation, FRotator& OutRotation);
 }

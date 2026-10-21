@@ -1,5 +1,9 @@
 #include "TankGameplayMath.h"
 
+#include "TankSnapShot.h"
+
+struct FTankSnapshot;
+
 namespace NetworkTankArena::LocalTank
 {
 	bool IsFiniteVector(const FVector& Value)
@@ -119,5 +123,35 @@ namespace NetworkTankArena::LocalTank
 	float CalculateRelativeTurretYaw(float ChassisYaw, float TurretWorldYaw)
 	{
 		return FMath::FindDeltaAngleDegrees(NormalizeYaw(ChassisYaw), NormalizeYaw(TurretWorldYaw));
+	}
+	
+	bool TryCalculateSnapshotInterpolation(const TArray<FTankSnapshot>& Buffer, float RenderTime, FVector& OutLocation, FRotator& OutRotation)
+	{
+		if (Buffer.Num() < 2) { return false; }
+
+		int32 IndexAfter = -1;
+		for (int32 i = 0; i < Buffer.Num(); i++)
+		{
+			if (Buffer[i].Timestamp > RenderTime)
+			{
+				IndexAfter = i;
+				break;
+			}
+		}
+
+		if (IndexAfter > 0)
+		{
+			const FTankSnapshot& SnapshotBefore = Buffer[IndexAfter - 1];
+			const FTankSnapshot& SnapshotAfter = Buffer[IndexAfter];
+
+			const float TimeDifference = SnapshotAfter.Timestamp - SnapshotBefore.Timestamp;
+			const float Alpha = (RenderTime - SnapshotBefore.Timestamp) / TimeDifference;
+
+			OutLocation = FMath::Lerp(SnapshotBefore.Location, SnapshotAfter.Location, Alpha);
+			OutRotation = FQuat::Slerp(SnapshotBefore.Rotation.Quaternion(), SnapshotAfter.Rotation.Quaternion(), Alpha).Rotator();
+			return true;
+		}
+
+		return false;
 	}
 }

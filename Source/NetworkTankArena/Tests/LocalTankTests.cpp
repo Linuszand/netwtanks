@@ -5,6 +5,8 @@
 #include "Misc/AutomationTest.h"
 #include <limits>
 
+#include "NetworkTankArena/TankSnapShot.h"
+
 using namespace NetworkTankArena::LocalTank;
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTankIntentTest, "NetworkTankArena.LocalTank.Intent",
@@ -159,6 +161,47 @@ bool FTankTurretStateTest::RunTest(const FString& Parameters)
 		const float VisualYaw = CalculateRelativeTurretYaw(ChassisYaw, Yaw);
 		TestTrue(TEXT("Chassis turns leave retained turret world yaw unchanged"), FMath::Abs(FMath::FindDeltaAngleDegrees(Yaw, ChassisYaw + VisualYaw)) < 0.001f);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTankSnapshotInterpolationTest, "NetworkTankArena.LocalTank.SnapshotInterpolation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FTankSnapshotInterpolationTest::RunTest(const FString& Parameters)
+{
+	using namespace NetworkTankArena::LocalTank;
+	// Simulate snapshot scenario
+	// First snapshot
+	TArray<FTankSnapshot> Buffer;
+	FTankSnapshot Snap1;
+	Snap1.Location = FVector(0.f, 0.f, 0.f);
+	Snap1.Rotation = FRotator(0.f, 0.f, 0.f);
+	Snap1.Timestamp = 10.0f;
+	
+	// Second snapshot
+	FTankSnapshot Snap2;
+	Snap2.Location = FVector(100.f, 0.f, 0.f);
+	Snap2.Rotation = FRotator(0.f, 90.f, 0.f);
+	Snap2.Timestamp = 10.1f;
+
+	Buffer.Add(Snap1);
+	Buffer.Add(Snap2);
+
+	FVector OutLoc;
+	FRotator OutRot;
+	
+	bool bSuccess = TryCalculateSnapshotInterpolation(Buffer, 10.05f, OutLoc, OutRot);
+    
+	TestTrue(TEXT("Found snapshots to interpolate between"), bSuccess);
+	TestTrue(TEXT("Location is exactly halfway (Lerp)"), OutLoc.Equals(FVector(50.f, 0.f, 0.f), 0.001f));
+	TestTrue(TEXT("Rotation is exactly halfway (Slerp)"), FMath::IsNearlyEqual(OutRot.Yaw, 45.f, 0.001f));
+	
+	bSuccess = TryCalculateSnapshotInterpolation(Buffer, 10.2f, OutLoc, OutRot);
+	TestFalse(TEXT("Fails gracefully when requesting a time too far in the future"), bSuccess);
+	
+	bSuccess = TryCalculateSnapshotInterpolation(Buffer, 9.0f, OutLoc, OutRot);
+	TestFalse(TEXT("Fails gracefully when requesting a time too far in the past"), bSuccess);
+
 	return true;
 }
 
