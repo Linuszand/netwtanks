@@ -40,6 +40,6 @@ These commands start from standalone play and require `TestMap` in the package.
 No account or online service is required.
 
 # Interpolation, Prediction & Reconciliation
-| --- | --- | --- | --- |
 | Technique | Target | When does it happen? | Main Purpose |
+| ------------- | --------------- | -------------------- | -------------------------- |
 | Interpolation | Remote Entities | Slightly in the past | Smooth out player movement |    
