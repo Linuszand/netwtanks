@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "TankControlIntent.h"
+#include "TankSnapShot.h"
 #include "TankPawn.generated.h"
 
 struct FTankSnapshot;
@@ -37,7 +38,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void OnRep_ReplicatedMovement() override;
+	
+	UFUNCTION()
+	void OnRep_ServerSnapshot();
 	
 	FVector TargetLocation;
 	FRotator TargetRotation;
@@ -48,6 +51,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Tank|Interpolation", meta = (AllowPrivateAccess = "true"))
 	float InterpDelay = 0.1f;
 	TArray<FTankSnapshot> SnapshotBuffer;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_ServerSnapshot)
+	FTankSnapshot ServerSnapshot;
 
 private:
 	friend class FTankMultiplayerAuthorityTest;

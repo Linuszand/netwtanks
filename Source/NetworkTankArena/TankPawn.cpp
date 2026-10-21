@@ -17,7 +17,7 @@ ATankPawn::ATankPawn()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickGroup = TG_PrePhysics;
 	bReplicates = true;
-	SetReplicatingMovement(true);
+	SetReplicatingMovement(false);
 	SetNetUpdateFrequency(20.f);
 	SetMinNetUpdateFrequency(20.f);
 	AutoPossessAI = EAutoPossessAI::Disabled;
@@ -155,6 +155,10 @@ void ATankPawn::Tick(float DeltaTime)
 			CanonicalTurretWorldYaw = NetworkTankArena::LocalTank::ResolveTurretWorldYaw(
 				CanonicalTurretWorldYaw, GetActorLocation(), CurrentIntent);
 		}
+		
+		ServerSnapshot.Location = GetActorLocation();
+		ServerSnapshot.Rotation = GetActorRotation();
+		
 	} else if (GetLocalRole() == ROLE_SimulatedProxy)
 	{
 		const float RenderTime = GetWorld()->GetTimeSeconds() - InterpDelay;
@@ -182,14 +186,11 @@ void ATankPawn::Tick(float DeltaTime)
 	}
 	ApplyPresentation(DeltaTime);
 }
-	
-
-	
 
 void ATankPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ATankPawn, CanonicalTurretWorldYaw);
+	DOREPLIFETIME(ATankPawn, ServerSnapshot);
 }
 
 void ATankPawn::OnRep_CanonicalTurretWorldYaw()
@@ -278,14 +279,17 @@ void ATankPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void ATankPawn::OnRep_ReplicatedMovement()
+void ATankPawn::OnRep_ServerSnapshot()
 {
-	const FRepMovement& RepMovement = GetReplicatedMovement();
-
-	FTankSnapshot NewSnapshot;
-	NewSnapshot.Location = RepMovement.Location;
-	NewSnapshot.Rotation = RepMovement.Rotation;
-	NewSnapshot.Timestamp = GetWorld()->GetTimeSeconds(); 
-	
+	FTankSnapshot NewSnapshot = ServerSnapshot;
+	NewSnapshot.Timestamp = GetWorld()->GetTimeSeconds();
+	// more than 0 snapshots, current timestamp - past timestamp more than 0.2
+	if (SnapshotBuffer.Num() > 0 && (NewSnapshot.Timestamp - SnapshotBuffer.Last().Timestamp) > 0.2f)
+	{
+		FTankSnapshot WakeUpSnapshot = SnapshotBuffer.Last();
+		WakeUpSnapshot.Timestamp = NewSnapshot.Timestamp - 0.05f;
+		SnapshotBuffer.Add(WakeUpSnapshot);
+	}
+		
 	SnapshotBuffer.Add(NewSnapshot);
 }

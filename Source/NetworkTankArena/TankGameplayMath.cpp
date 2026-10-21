@@ -145,6 +145,14 @@ namespace NetworkTankArena::LocalTank
 			const FTankSnapshot& SnapshotAfter = Buffer[IndexAfter];
 
 			const float TimeDifference = SnapshotAfter.Timestamp - SnapshotBefore.Timestamp;
+			
+			if (TimeDifference <= UE_KINDA_SMALL_NUMBER)
+			{
+				OutLocation = SnapshotAfter.Location;
+				OutRotation = SnapshotAfter.Rotation;
+				return true;
+			}
+			
 			const float Alpha = (RenderTime - SnapshotBefore.Timestamp) / TimeDifference;
 
 			OutLocation = FMath::Lerp(SnapshotBefore.Location, SnapshotAfter.Location, Alpha);
