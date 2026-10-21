@@ -5,6 +5,7 @@
 #include "TankControlIntent.h"
 #include "TankPawn.generated.h"
 
+struct FTankSnapshot;
 class UCapsuleComponent;
 class USceneComponent;
 class UStaticMeshComponent;
@@ -42,7 +43,11 @@ protected:
 	FRotator TargetRotation;
 	
 	float CurrentTurretYaw;
+	UPROPERTY(EditAnywhere, Category = "Tank|Interpolation", meta = (AllowPrivateAccess = "true"))
 	float InterpSpeed = 10.f;
+	UPROPERTY(EditAnywhere, Category = "Tank|Interpolation", meta = (AllowPrivateAccess = "true"))
+	float InterpDelay = 0.1f;
+	TArray<FTankSnapshot> SnapshotBuffer;
 
 private:
 	friend class FTankMultiplayerAuthorityTest;

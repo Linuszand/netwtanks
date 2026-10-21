@@ -9,6 +9,7 @@
 #include "Net/UnrealNetwork.h"
 #include "TankGameplayMath.h"
 #include "TankMovementComponent.h"
+#include "TankSnapShot.h"
 #include "TankWeaponComponent.h"
 
 ATankPawn::ATankPawn()
@@ -156,10 +157,44 @@ void ATankPawn::Tick(float DeltaTime)
 		}
 	} else if (GetLocalRole() == ROLE_SimulatedProxy)
 	{
-		FVector SmoothLocation = FMath::VInterpTo(GetActorLocation(), TargetLocation, DeltaTime, InterpSpeed);
-		FRotator SmoothRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, InterpSpeed);
-		
-		SetActorLocationAndRotation(SmoothLocation, SmoothRotation);
+		if (SnapshotBuffer.Num() >= 2)
+		{
+			const float RenderTime = GetWorld()->GetTimeSeconds() - InterpDelay;
+			
+			int IndexAfter = -1;
+			for (int i = 0; i < SnapshotBuffer.Num(); i++)
+			{
+				if (SnapshotBuffer[i].Timestamp > RenderTime)
+				{
+					IndexAfter = i;
+					break;
+				}
+			}
+			
+			if (IndexAfter > 0)
+			{
+				FTankSnapshot SnapshotBefore = SnapshotBuffer[IndexAfter - 1];
+				FTankSnapshot SnapshotAfter = SnapshotBuffer[IndexAfter];
+				
+				const float TimeDiff = SnapshotAfter.Timestamp - SnapshotBefore.Timestamp;
+				const float Alpha = (RenderTime - SnapshotBefore.Timestamp) / TimeDiff;
+				
+				FVector TargetLoc = FMath::Lerp(SnapshotBefore.Location, SnapshotAfter.Location, Alpha);
+				FRotator TargetRot = FQuat::Slerp(SnapshotBefore.Rotation.Quaternion(), SnapshotAfter.Rotation.Quaternion(), Alpha).Rotator();
+				
+				SetActorLocationAndRotation(TargetLoc, TargetRot);
+				
+				if (IndexAfter > 0)
+				{
+					SnapshotBuffer.RemoveAt(0, IndexAfter - 1);
+				}
+			} else if (IndexAfter == -1)
+			{
+				FVector SmoothLoc = FMath::VInterpTo(GetActorLocation(), SnapshotBuffer.Last().Location, DeltaTime, InterpSpeed);
+				FRotator SmoothRot = FMath::RInterpTo(GetActorRotation(), SnapshotBuffer.Last().Rotation, DeltaTime, InterpSpeed);
+				SetActorLocationAndRotation(SmoothLoc, SmoothRot);
+			}
+		}
 	}
 	ApplyPresentation(DeltaTime);
 }
@@ -258,6 +293,12 @@ void ATankPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ATankPawn::OnRep_ReplicatedMovement()
 {
-	TargetLocation = GetReplicatedMovement().Location;
-	TargetRotation = GetReplicatedMovement().Rotation;
+	const FRepMovement& RepMovement = GetReplicatedMovement();
+
+	FTankSnapshot NewSnapshot;
+	NewSnapshot.Location = RepMovement.Location;
+	NewSnapshot.Rotation = RepMovement.Rotation;
+	NewSnapshot.Timestamp = GetWorld()->GetTimeSeconds(); 
+	
+	SnapshotBuffer.Add(NewSnapshot);
 }
