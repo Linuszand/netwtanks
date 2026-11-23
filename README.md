@@ -21,6 +21,7 @@ Since I got annoyed that the clients tank was stuttering/jittering a lot, I deci
 8. Scroll down to Enable Nework Emulation and then play around with the settings.
 9. Done.
 
-## What I changed/Improved
-I added interpolation to the clients tank to make the movement more smooth when driving it & rotating the tank's turret. There are no stutters/jitters now.
-
+## What I Changed/Improved/Implemented
+- I SetReplicateMovement(false) and unchecked Replicate Movement on the Blueprint.
+- Added ServerSnapshot and OnRep_ServerSnapshot buffering, allowing the client to make use of those saved buffers and then interpolate on them.
+- In the Tick method inside TankPawn.cpp, I added ROLE_SimulatedProxy snapshot interpolation for the client side, with buffer pruning (removing old & already used snapshots to the array does not grow indefinitely/infinitely in memory. 
