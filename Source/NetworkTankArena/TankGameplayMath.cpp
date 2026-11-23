@@ -155,6 +155,7 @@ namespace NetworkTankArena::LocalTank
 			
 			const float Alpha = (RenderTime - SnapshotBefore.Timestamp) / TimeDifference;
 
+			
 			OutLocation = FMath::Lerp(SnapshotBefore.Location, SnapshotAfter.Location, Alpha);
 			OutRotation = FQuat::Slerp(SnapshotBefore.Rotation.Quaternion(), SnapshotAfter.Rotation.Quaternion(), Alpha).Rotator();
 			return true;
