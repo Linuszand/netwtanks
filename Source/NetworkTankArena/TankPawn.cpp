@@ -281,13 +281,15 @@ void ATankPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ATankPawn::OnRep_ServerSnapshot()
 {
-	FTankSnapshot NewSnapshot = ServerSnapshot;
-	NewSnapshot.Timestamp = GetWorld()->GetTimeSeconds();
-	// more than 0 snapshots, current timestamp - past timestamp more than 0.2
+	FTankSnapshot NewSnapshot = ServerSnapshot; // Get the ServerSnapshot (FTankSnapshot)
+	NewSnapshot.Timestamp = GetWorld()->GetTimeSeconds(); // Update Timestamp to the current time in seconds
+
+	// Is the SnapshotBuffer not empy & the difference between the current Timestamp and the one added first more than 0.2f?
 	if (SnapshotBuffer.Num() > 0 && (NewSnapshot.Timestamp - SnapshotBuffer.Last().Timestamp) > 0.2f)
 	{
-		FTankSnapshot WakeUpSnapshot = SnapshotBuffer.Last();
-		WakeUpSnapshot.Timestamp = NewSnapshot.Timestamp - 0.05f;
+	 	
+	 	FTankSnapshot WakeUpSnapshot = SnapshotBuffer.Last();
+	 	WakeUpSnapshot.Timestamp = NewSnapshot.Timestamp - 0.05f;
 		SnapshotBuffer.Add(WakeUpSnapshot);
 	}
 		

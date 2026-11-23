@@ -22,6 +22,7 @@ Since I got annoyed that the clients tank was stuttering/jittering a lot, I deci
 9. Done.
 
 ## What I Changed/Improved/Implemented
-- I SetReplicateMovement(false) and unchecked Replicate Movement on the Blueprint.
-- Added ServerSnapshot and OnRep_ServerSnapshot buffering, allowing the client to make use of those saved buffers and then interpolate on them.
-- In the Tick method inside TankPawn.cpp, I added ROLE_SimulatedProxy snapshot interpolation for the client side, with buffer pruning (removing old & already used snapshots to the array does not grow indefinitely/infinitely in memory. 
+- `ServerSnapshot` is a `FTankSnapshot` struct that is used to send data from the server to the client. It's in the `TankSnapshot.h` file.
+- I `SetReplicateMovement(false)` and unchecked the Replicate Movement box on the Blueprint (BP_Tank).
+- Added `OnRep_ServerSnapshot` buffering to timestamp incoming snapshots, so the client has buffered data to interpolate across.
+- In the Tick method inside TankPawn.cpp, I added `ROLE_SimulatedProxy` snapshot interpolation for the client side using `RenderTime`, with buffer pruning (removing old & already used snapshots, so that the array `SnapshotBuffer` does not grow indefinitely/infinitely in memory `SnapshotBuffer.RemoveAt(0);`.
